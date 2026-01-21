@@ -2,7 +2,11 @@ package com.lukegl.webservice.services;
 
 import com.lukegl.webservice.entities.User;
 import com.lukegl.webservice.repositories.UserRepository;
+import com.lukegl.webservice.services.exceptions.DatabaseException;
+import com.lukegl.webservice.services.exceptions.ResourceNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -18,9 +22,9 @@ public class UserService {
         return repository.findAll();
     }
 
-    public User findById(Long Id){
-        Optional<User> obj = repository.findById(Id);
-        return obj.get();
+    public User findById(Long id){
+        Optional<User> obj = repository.findById(id);
+        return obj.orElseThrow(() -> new ResourceNotFoundException(id));
     }
 
     public User insert(User obj){
@@ -28,7 +32,15 @@ public class UserService {
     }
 
     public void delete(Long id){
-        repository.deleteById(id);
+        if (!repository.existsById(id)) {
+            throw new ResourceNotFoundException(id);
+        }
+
+        try {
+            repository.deleteById(id);
+        } catch (DataIntegrityViolationException e) {
+            throw new DatabaseException(e.getMessage());
+        }
     }
 
     public User update(Long id, User obj){
